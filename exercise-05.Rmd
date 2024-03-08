@@ -1,0 +1,664 @@
+---
+title: "exercise-05"
+output: html_document
+date: "2024-03-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+```
+### Load in Libraries
+```{r}
+library(tidyverse)
+library(mosaic)
+library(car)
+library(manipulate)
+```
+## Challenge 1
+
+### Read in file
+```{r}
+f <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/IMDB-movies.csv"
+d <- read_csv(f)
+```
+
+### Filter Movies from 1920 to 1979 and that are between 1 and 3 hours long
+### Add "decade" column
+```{r}
+d <- d %>% 
+  subset(startYear >= 1920) %>%
+  subset(startYear <= 1979) %>%
+  subset(runtimeMinutes >= 60) %>%
+  subset(runtimeMinutes <= 180) %>% 
+  mutate(decade = ifelse(startYear >= 1970, "70s",
+                  ifelse(startYear >= 1960, "60s",
+                  ifelse(startYear >= 1950, "50s",
+                  ifelse(startYear >= 1940, "40s",
+                  ifelse(startYear >= 1930, "30s", "20s"))))))
+```
+
+### Make a histogram of run times for each decade
+```{r}
+hist <- ggplot(d, aes(runtimeMinutes)) + geom_histogram() + facet_wrap(.~decade)
+hist
+```
+
+### Calculate Mean and SD of run times for each decade
+```{r}
+results <- data.frame(c(unique(d$decade)), c(aggregate(d$runtimeMinutes ~ d$decade, d, "mean")), c(aggregate(d$runtimeMinutes ~ d$decade, d, "sd")))   %>%
+  subset(select = -c(d.decade,d.decade.1)) %>%
+  setNames(c('Decade', 'Runtime_Mean (Min)', 'Runtime_SD (Min)')) 
+
+results
+
+# Check mean and standard variation
+# r20s <- d %>% subset(decade == "20s")
+# mean20s <- mean(r20s$runtimeMinutes)
+# sd20s <- sd(r20s$runtimeMinutes)
+```
+
+### Create a Sample Mean of Run Times of 100 movies for Each Decade
+```{r}
+n <- 100 #number of samples
+s <- slice_sample(d, n = n, by = decade, weight_by = NULL, replace = FALSE)
+
+smean20s <- s %>%
+  subset(decade == "20s") %>%
+  summarize(mean(runtimeMinutes)) %>%
+  as.numeric()
+
+smean30s <- s %>%
+  subset(decade == "30s") %>%
+  summarise(mean(runtimeMinutes)) %>%
+  as.numeric()
+
+smean40s <- s %>%
+  subset(decade == "40s") %>%
+  summarise(mean(runtimeMinutes)) %>%
+  as.numeric()
+
+smean50s <- s %>%
+  subset(decade == "50s") %>%
+  summarise(mean(runtimeMinutes)) %>%
+  as.numeric()
+
+smean60s <- s %>%
+  subset(decade == "60s") %>%
+  summarise(mean(runtimeMinutes)) %>%
+  as.numeric()
+
+smean70s <- s %>%
+  subset(decade == "70s") %>%
+  summarise(mean(runtimeMinutes)) %>%
+  as.numeric()
+
+Sample_Means <- c(smean20s, smean30s, smean40s, smean50s, smean60s, smean70s)
+
+```
+
+### Calculate Standard Deviation of Means
+```{r}
+# Use "s" from previous sampling
+ssd20s <- s %>%
+  subset(decade == "20s") %>%
+  summarise(sd(runtimeMinutes)) %>%
+  as.numeric()
+
+ssd30s <- s %>%
+  subset(decade == "30s") %>%
+  summarise(sd(runtimeMinutes)) %>%
+  as.numeric()
+
+ssd40s <- s %>%
+  subset(decade == "40s") %>%
+  summarise(sd(runtimeMinutes)) %>%
+  as.numeric()
+
+ssd50s <- s %>%
+  subset(decade == "50s") %>%
+  summarise(sd(runtimeMinutes)) %>%
+  as.numeric()
+
+ssd60s <- s %>%
+  subset(decade == "60s") %>%
+  summarise(sd(runtimeMinutes)) %>%
+  as.numeric()
+
+ssd70s <- s %>%
+  subset(decade == "70s") %>%
+  summarise(sd(runtimeMinutes)) %>%
+  as.numeric()
+
+Sample_SDs <- c(ssd20s, ssd30s, ssd40s, ssd50s, ssd60s, ssd70s)
+
+```
+
+### Calculate Means from Population
+```{r}
+mean20s <- d %>%
+  subset(decade == "20s") %>%
+  summarise(mean(runtimeMinutes)) %>%
+  as.numeric()
+
+mean30s <- d %>%
+  subset(decade == "30s") %>%
+  summarise(mean(runtimeMinutes)) %>%
+  as.numeric()
+
+mean40s <- d %>%
+  subset(decade == "40s") %>%
+  summarise(mean(runtimeMinutes)) %>%
+  as.numeric()
+
+mean50s <- d %>%
+  subset(decade == "50s") %>%
+  summarise(mean(runtimeMinutes)) %>%
+  as.numeric()
+
+mean60s <- d %>%
+  subset(decade == "60s") %>%
+  summarise(mean(runtimeMinutes)) %>%
+  as.numeric()
+
+mean70s <- d %>%
+  subset(decade == "70s") %>%
+  summarise(mean(runtimeMinutes)) %>%
+  as.numeric()
+
+Pop_Means <- c(mean20s, mean30s, mean40s, mean50s, mean60s, mean70s)
+```
+
+### Calculate Standard Error of Samples
+```{r}
+sSE20s <- ssd20s/sqrt(n)
+
+sSE30s <- ssd30s/sqrt(n)
+
+sSE40s <- ssd40s/sqrt(n)
+
+sSE50s <- ssd50s/sqrt(n)
+
+sSE60s <- ssd60s/sqrt(n)
+
+sSE70s <- ssd70s/sqrt(n)
+
+Sample_Standard_Errors <- c(sSE20s, sSE30s, sSE40s, sSE50s, sSE60s, sSE70s)
+```
+
+### Compare Sample and Population Statistics
+```{r}
+Decade <- c("20s", "30s", "40s", "50s", "60s", "70s")
+
+rtStats <- data.frame(Decade, Sample_Means, Pop_Means, Sample_SDs, Sample_Standard_Errors)
+
+rtStats
+```
+
+### Generate a Sampling Distribution of 1000 Samples
+### of 100 Movies of Each Decade
+```{r}
+reps <- 1000
+
+mdist20s <- vector(length = reps)
+mdist30s <- vector(length = reps)
+mdist40s <- vector(length = reps)
+mdist50s <- vector(length = reps)
+mdist60s <- vector(length = reps)
+mdist70s <- vector(length = reps)
+
+sdist20s <- vector(length = reps)
+sdist30s <- vector(length = reps)
+sdist40s <- vector(length = reps)
+sdist50s <- vector(length = reps)
+sdist60s <- vector(length = reps)
+sdist70s <- vector(length = reps)
+ 
+for (i in 1:reps) {
+  samp <- slice_sample(d, n = n, by = decade, weight_by = NULL, replace = FALSE)
+  mdist20s[[i]] <- samp %>%
+  subset(decade == "20s") %>%
+  summarize(mean(runtimeMinutes)) %>%
+  as.numeric()
+  
+  mdist30s[[i]] <- samp %>%
+  subset(decade == "30s") %>%
+  summarize(mean(runtimeMinutes)) %>%
+  as.numeric()
+  
+  mdist40s[[i]] <- samp %>%
+  subset(decade == "40s") %>%
+  summarize(mean(runtimeMinutes)) %>%
+  as.numeric()
+  
+  mdist50s[[i]] <- samp %>%
+  subset(decade == "50s") %>%
+  summarize(mean(runtimeMinutes)) %>%
+  as.numeric()
+  
+  mdist60s[[i]] <- samp %>%
+  subset(decade == "60s") %>%
+  summarize(mean(runtimeMinutes)) %>%
+  as.numeric()
+  
+  mdist70s[[i]] <- samp %>%
+  subset(decade == "70s") %>%
+  summarize(mean(runtimeMinutes)) %>%
+  as.numeric()
+  
+  sdist20s[[i]] <- samp %>%
+  subset(decade == "20s") %>%
+  summarise(sd(runtimeMinutes)) %>%
+  as.numeric()
+  
+  sdist30s[[i]] <- samp %>%
+  subset(decade == "30s") %>%
+  summarise(sd(runtimeMinutes)) %>%
+  as.numeric()
+  
+  sdist40s[[i]] <- samp %>%
+  subset(decade == "40s") %>%
+  summarise(sd(runtimeMinutes)) %>%
+  as.numeric()
+  
+  sdist50s[[i]] <- samp %>%
+  subset(decade == "50s") %>%
+  summarise(sd(runtimeMinutes)) %>%
+  as.numeric()
+  
+  sdist60s[[i]] <- samp %>%
+  subset(decade == "60s") %>%
+  summarise(sd(runtimeMinutes)) %>%
+  as.numeric()
+  
+  sdist70s[[i]] <- samp %>%
+  subset(decade == "70s") %>%
+  summarise(sd(runtimeMinutes)) %>%
+  as.numeric()
+}
+```
+
+### Calculate Mean and SD of Sampling Distribution of Each Decade
+```{r}
+m20sDist <- mean(mdist20s)
+m30sDist <- mean(mdist30s)
+m40sDist <- mean(mdist40s)
+m50sDist <- mean(mdist50s)
+m60sDist <- mean(mdist60s)
+m70sDist <- mean(mdist70s)
+
+Sampling_Distribution_Means <- c(m20sDist, m30sDist, m40sDist, m50sDist, m60sDist, m70sDist)
+
+sd20sDist <- mean(sdist20s)
+sd30sDist <- mean(sdist30s)
+sd40sDist <- mean(sdist40s)
+sd50sDist <- mean(sdist50s)
+sd60sDist <- mean(sdist60s)
+sd70sDist <- mean(sdist70s)
+
+Sampling_Distribution_SDs <- c(sd20sDist, sd30sDist, sd40sDist, sd50sDist, sd60sDist, sd70sDist)
+```
+
+### Plot Histogram of the Means of Each Decade
+##### They Have a Normal Distribution
+```{r}
+hist(mdist20s)
+hist(mdist30s)
+hist(mdist40s)
+hist(mdist50s)
+hist(mdist60s)
+hist(mdist70s)
+```
+
+### Compare Means of First Sample, Population, and Sampling Distribution
+### for Each Decade
+```{r}
+rtMeanResults <- data.frame(Decade, Sample_Means, Pop_Means, Sampling_Distribution_Means)
+
+rtMeanResults
+```
+
+## Challenge 2
+### Read in File
+```{r}
+g <- "https://raw.githubusercontent.com/difiore/ada-2024-datasets/main/zombies.csv"
+
+z <- read_csv(g)
+```
+
+### Calculate Population Mean and SD for 
+### Each Quantitative Variable
+```{r}
+Quantitative_Variables <- c("Height", "Weight", "Age", "Zombies Killed", "Years of Education")
+
+# Means
+zHeightMean <- mean(z$height)
+zWeightMean <- mean(z$weight)
+zAgeMean <- mean(z$age)
+zZKilledMean <- mean(z$zombies_killed)
+zYearsEduMean <- mean(z$years_of_education)
+
+Population_Means <- c(zHeightMean,zWeightMean,zAgeMean,zZKilledMean,zYearsEduMean)
+
+# Population SD
+n <- nrow(z) #Population Size
+
+zHeightSD <- sqrt((sum((z$height - zHeightMean)^2))/n)
+zWeightSD <- sqrt((sum((z$weight - zWeightMean)^2))/n)
+zAgeSD <- sqrt((sum((z$age - zAgeMean)^2))/n)
+zZKilledSD <- sqrt((sum((z$zombies_killed - zZKilledMean)^2))/n)
+zYearsEduSD <- sqrt((sum((z$years_of_education - zYearsEduMean)^2))/n)
+
+Population_SDs <- c(zHeightSD,zWeightSD,zAgeSD,zZKilledSD,zYearsEduSD)
+
+PopStats <- data.frame(Quantitative_Variables,Population_Means,Population_SDs)
+PopStats
+```
+
+### Make Boxplots of Each of These Variables by Gender
+```{r}
+zHeightBP <- ggplot(z, aes(x = gender, y = height)) +
+            geom_boxplot() + xlab("Gender") + ylab("Height")
+zWeightBP <- ggplot(z, aes(x = gender, y = weight)) +
+            geom_boxplot() + xlab("Gender") + ylab("Weight")
+zAgeBP <- ggplot(z, aes(x = gender, y = age)) +
+            geom_boxplot() + xlab("Gender") + ylab("Age")
+zZKilledBP <- ggplot(z, aes(x = gender, y = zombies_killed)) +
+            geom_boxplot() + xlab("Gender") + ylab("Zombies Killed")
+zYearsEduBP <- ggplot(z, aes(x = gender, y = years_of_education)) +
+            geom_boxplot() + xlab("Gender") + ylab("Years of Education")
+zHeightBP
+zWeightBP
+zAgeBP
+zZKilledBP
+zYearsEduBP
+```
+
+### Make Scatterplots of Height and Weight vs Age,
+### Separated by Gender
+##### For both variables males appear to have higher values,
+##### though only height appears to have a positive correlation between
+##### with age, whereas weight appears to have no correlation.
+```{r}
+sctrH <- ggplot(z, aes(x = age, y = height, color = gender)) +
+  geom_point()
+
+sctrW <- ggplot(z, aes(x = age, y = weight, color = gender)) +
+  geom_point()
+
+sctrH
+sctrW
+```
+
+### Histograms and QQ Plots of Quantitative Variables
+##### Height, Weight, and Age appear to be normally distributed,
+##### whereas the number of zombies killed and years of 
+##### education appear to be a positively skewed distribution.
+```{r}
+hist(z$height, xlab = "Height", ylab = "Frequency", main = "Height Histogram")
+hist(z$weight, xlab = "Weight", ylab = "Frequency", main = "Weight Histogram")
+hist(z$age, xlab = "Age", ylab = "Frequency", main = "Age Histogram")
+hist(z$zombies_killed, xlab = "Zombies Killed", ylab = "Frequency", main = "Zombies Killed Histogram")
+hist(z$years_of_education, xlab = "Years of Education", ylab = "Frequency", main = "Years of Education Histogram")
+
+qqPlot(z$height, ylab = "Height", xlab = "Norm Quantiles", main = "Height Q-Q Plot")
+qqPlot(z$weight, ylab = "Weight", xlab = "Norm Quantiles", main = "Weight Q-Q Plot")
+qqPlot(z$age, ylab = "Age", xlab = "Norm Quantiles", main = "Age Q-Q Plot")
+qqPlot(z$zombies_killed, ylab = "Zombies Killed", xlab = "Norm Quantiles", main = "Zombies Killed Q-Q Plot")
+qqPlot(z$years_of_education, ylab = "Years of Education", xlab = "Norm Quantiles", main = "Years of Education Q-Q Plot")
+```
+
+### Sample of 50 Survivors without replacement
+### Calculate Sample Means and SDs of Quantitative Variables
+```{r}
+sampPop <- 50
+zsamp <- slice_sample(z, n = sampPop, weight_by = NULL, replace = FALSE)
+
+sampHM <- zsamp %>%
+  summarize(mean(height)) %>%
+  as.numeric()
+sampWM <- zsamp %>%
+  summarize(mean(weight)) %>%
+  as.numeric()
+sampAM <- zsamp %>%
+  summarize(mean(age)) %>%
+  as.numeric()
+sampZKM <- zsamp %>%
+  summarize(mean(zombies_killed)) %>%
+  as.numeric()
+sampYEM <- zsamp %>%
+  summarize(mean(years_of_education)) %>%
+  as.numeric()
+
+zSampMeans <- c(sampHM, sampWM, sampAM, sampZKM, sampYEM)
+
+sampHSD <- zsamp %>%
+  summarize(sd(height)) %>%
+  as.numeric()
+sampWSD <- zsamp %>%
+  summarize(sd(weight)) %>%
+  as.numeric()
+sampASD <- zsamp %>%
+  summarize(sd(age)) %>%
+  as.numeric()
+sampZKSD <- zsamp %>%
+  summarize(sd(zombies_killed)) %>%
+  as.numeric()
+sampYESD <- zsamp %>%
+  summarize(sd(years_of_education)) %>%
+  as.numeric()
+
+zSampSDs <- c(sampHSD, sampWSD, sampASD, sampZKSD, sampYESD)
+```
+
+### Calculate Standard Error Estimate and
+### 95% Confidence Interval for Each Mean
+```{r}
+sampHSE <- sampHSD/sqrt(sampPop)
+sampWSE <- sampWSD/sqrt(sampPop)
+sampASE <- sampASD/sqrt(sampPop)
+sampZKSE <- sampZKSD/sqrt(sampPop)
+sampYESE <- sampYESD/sqrt(sampPop)
+
+zSampSEs <- c(sampHSE, sampWSE, sampASE, sampZKSE, sampYESE) 
+
+lowerSampHCI95 <- signif(sampHM + qnorm(p = .025) * sampHSE, digits = 5)
+upperSampHCI95 <- signif(sampHM + qnorm(p = .975) * sampHSE, digits = 5)
+ci95SampH <- paste(lowerSampHCI95, "-", upperSampHCI95)
+
+lowerSampWCI95 <- signif(sampWM + qnorm(p = .025) * sampWSE, digits = 5)
+upperSampWCI95 <- signif(sampWM + qnorm(p = .975) * sampWSE, digits = 5)
+ci95SampW <- paste(lowerSampWCI95, "-", upperSampWCI95)
+
+lowerSampACI95 <- signif(sampAM + qnorm(p = .025) * sampASE, digits = 5)
+upperSampACI95 <- signif(sampAM + qnorm(p = .975) * sampASE, digits = 5)
+ci95SampA <- paste(lowerSampACI95, "-", upperSampACI95)
+
+lowerSampZKCI95 <- signif(sampZKM + qnorm(p = .025) * sampZKSE, digits = 5)
+upperSampZKCI95 <- signif(sampZKM + qnorm(p = .975) * sampZKSE, digits = 5)
+ci95SampZK <- paste(lowerSampZKCI95, "-", upperSampZKCI95)
+
+lowerSampYECI95 <- signif(sampYEM + qnorm(p = .025) * sampYESE, digits = 5)
+upperSampYECI95 <- signif(sampYEM + qnorm(p = .975) * sampYESE, digits = 5)
+ci95SampYE <- paste(lowerSampYECI95, "-", upperSampYECI95)
+
+zSampCI95s <- c(ci95SampH, ci95SampW, ci95SampA, ci95SampZK, ci95SampYE)
+```
+
+### Draw 199 Random Samples of 50 Survivors and Gather Means 
+### of Quantitative Variables
+```{r}
+zreps <- 199
+
+zDistH <- vector(length = zreps)
+zDistW <- vector(length = zreps)
+zDistA <- vector(length = zreps)
+zDistZK <- vector(length = zreps)
+zDistYE <- vector(length = zreps)
+
+for (i in 1:zreps) {
+  zsamp <- slice_sample(z, n = sampPop, weight_by = NULL, replace = FALSE)
+  
+zDistH[[i]] <- zsamp %>%
+  summarize(mean(height)) %>%
+  as.numeric()
+  
+zDistW[[i]] <- zsamp %>%
+  summarize(mean(weight)) %>%
+  as.numeric()
+
+zDistA[[i]] <- zsamp %>%
+  summarize(mean(age)) %>%
+  as.numeric()
+
+zDistZK[[i]] <- zsamp %>%
+  summarize(mean(zombies_killed)) %>%
+  as.numeric()
+
+zDistYE[[i]] <- zsamp %>%
+  summarize(mean(years_of_education)) %>%
+  as.numeric()
+}
+```
+
+### Add Previous Sample to the New 199 Samples
+```{r}
+zDistH <- append(zDistH, sampHM)
+zDistW <- append(zDistW, sampWM)
+zDistA <- append(zDistA, sampAM)
+zDistZK <- append(zDistZK, sampZKM)
+zDistYE <- append(zDistYE, sampYEM)
+```
+
+### Mean and SD of Each Variable
+```{r}
+zDistHM <- mean(zDistH)
+zDistWM <- mean(zDistW)
+zDistAM <- mean(zDistA)
+zDistZKM <- mean(zDistZK)
+zDistYEM <- mean(zDistYE)
+
+zDistMs <- c(zDistHM, zDistWM, zDistAM, zDistZKM, zDistYEM)
+
+zDistHSD <- sd(zDistH)
+zDistWSD <- sd(zDistW)
+zDistASD <- sd(zDistA)
+zDistZKSD <- sd(zDistZK)
+zDistYESD <- sd(zDistYE)
+
+zDistSDs <- c(zDistHSD, zDistWSD, zDistASD, zDistZKSD, zDistYESD)
+```
+
+### Compare Means and SDs from Sampling Distribution to the 
+### Standard Error of the First Sample
+##### Distribution Standard Deviations are About Equal to the Standard
+##### Errors of the First Sample
+```{r}
+zDistStats <- data.frame(Quantitative_Variables, zDistMs, zDistSDs, zSampSEs)
+colnames(zDistStats) <- c("Variable", "Distribution Means", "Distribution Standard Deviations", "Sample Standard Errors")
+zDistStats
+```
+
+### Plot Distribution Means
+##### All variables now have a normal distribution, including number of
+##### zombies killed and years of education, which were previously
+##### positively skewed
+```{r}
+hist(zDistH, xlab = "Height Means", main = "Sampling Distribution Height Means")
+hist(zDistW, xlab = "Weight Means", main = "Sampling Distribution Weight Means")
+hist(zDistA, xlab = "Age Means", main = "Sampling Distribution Age Means")
+hist(zDistZK, xlab = "Zombies Killed Means", main = "Sampling Distribution Zombies Killed Means")
+hist(zDistYE, xlab = "Years of Education Means", main = "Sampling Distribution Years of Education Means")
+```
+
+### Construct 95% Confidence Interval for Each Variable 
+### from Sampling Distribution
+##### Confidence intervals were relatively close between the 
+##### sampling distribution and the single sample
+```{r}
+lowerDistH <- signif(quantile(zDistH, .025), digits = 5)
+upperDistH <- signif(quantile(zDistH, .975), digits = 5)
+zDistCIH <- paste(lowerDistH, "-", upperDistH)
+
+lowerDistW <- signif(quantile(zDistW, .025), digits = 5)
+upperDistW <- signif(quantile(zDistW, .975), digits = 5)
+zDistCIW <- paste(lowerDistW, "-", upperDistW)
+
+lowerDistA <- signif(quantile(zDistA, .025), digits = 5)
+upperDistA <- signif(quantile(zDistA, .975), digits = 5)
+zDistCIA <- paste(lowerDistA, "-", upperDistA)
+
+lowerDistZK <- signif(quantile(zDistZK, .025), digits = 5)
+upperDistZK <- signif(quantile(zDistZK, .975), digits = 5)
+zDistCIZK <- paste(lowerDistZK, "-", upperDistZK)
+
+lowerDistYE <- signif(quantile(zDistYE, .025), digits = 5)
+upperDistYE <- signif(quantile(zDistYE, .975), digits = 5)
+zDistCIYE <- paste(lowerDistYE, "-",  upperDistYE)
+
+zDistCIs <- c(zDistCIH, zDistCIW, zDistCIA, zDistCIZK, zDistCIYE)
+
+DistCIs <- data.frame(Quantitative_Variables, zDistCIs, zSampCI95s)
+colnames(DistCIs) <- c("Variable", "Distribution 95% CIs", "Sample 95% CIs")
+DistCIs
+```
+
+### Generate a Bootstrap Distribution and Calculate 95% CI
+```{r}
+n_boot <- 1000
+
+BootH <- vector(length = n_boot)
+BootW <- vector(length = n_boot)
+BootA <- vector(length = n_boot)
+BootZK <- vector(length = n_boot)
+BootYE <- vector(length = n_boot)
+
+for (i in 1:n_boot) {
+  zBoot <- slice_sample(z, n = sampPop, weight_by = NULL, replace = TRUE)
+  
+BootH[[i]] <- zBoot %>%
+  summarize(mean(height)) %>%
+  as.numeric()
+
+BootW[[i]] <- zBoot %>%
+  summarize(mean(weight)) %>%
+  as.numeric()
+
+BootA[[i]] <- zBoot %>%
+  summarize(mean(age)) %>%
+  as.numeric()
+
+BootZK[[i]] <- zBoot %>%
+  summarize(mean(zombies_killed)) %>%
+  as.numeric()
+
+BootYE[[i]] <- zBoot %>%
+  summarize(mean(years_of_education)) %>%
+  as.numeric()
+}
+
+lowerBootH <- signif(quantile(BootH, .025), digits = 5)
+upperBootH <- signif(quantile(BootH, .975), digits = 5)
+zBootCIH <- paste(lowerBootH, "-", upperBootH)
+
+lowerBootW <- signif(quantile(BootW, .025), digits = 5)
+upperBootW <- signif(quantile(BootW, .975), digits = 5)
+zBootCIW <- paste(lowerBootW, "-", upperBootW)
+
+lowerBootA <- signif(quantile(BootA, .025), digits = 5)
+upperBootA <- signif(quantile(BootA, .975), digits = 5)
+zBootCIA <- paste(lowerBootA, "-", upperBootA)
+
+lowerBootZK <- signif(quantile(BootZK, .025), digits = 5)
+upperBootZK <- signif(quantile(BootZK, .975), digits = 5)
+zBootCIZK <- paste(lowerBootZK, "-", upperBootZK)
+
+lowerBootYE <- signif(quantile(BootYE, .025), digits = 5)
+upperBootYE <- signif(quantile(BootYE, .975), digits = 5)
+zBootCIYE <- paste(lowerBootYE, "-",  upperBootYE)
+
+zBootCIs <- c(zBootCIH, zBootCIW, zBootCIA, zBootCIZK, zBootCIYE)
+
+BootCIs <- data.frame(Quantitative_Variables, zDistCIs, zSampCI95s, zBootCIs)
+colnames(BootCIs) <- c("Variable", "Distribution 95% CIs", "Sample 95% CIs", "Bootstrap 95% CIs")
+BootCIs
+```
